@@ -247,6 +247,7 @@ extern tSDP_CB *sdp_cb_ptr;
 
 /* Functions provided by sdp_main.c */
 extern void     sdp_init (void);
+extern void     sdp_free(void);
 extern void     sdp_disconnect (tCONN_CB*p_ccb, UINT16 reason);
 
 #if (defined(SDP_DEBUG) && SDP_DEBUG == TRUE)
@@ -283,7 +284,7 @@ extern void      sdpu_build_n_send_error (tCONN_CB *p_ccb, UINT16 trans_num, UIN
 extern UINT8    *sdpu_extract_attr_seq (UINT8 *p, UINT16 param_len, tSDP_ATTR_SEQ *p_seq);
 extern UINT8    *sdpu_extract_uid_seq (UINT8 *p, UINT16 param_len, tSDP_UUID_SEQ *p_seq);
 
-extern UINT8    *sdpu_get_len_from_type (UINT8 *p, UINT8 type, UINT32 *p_len);
+extern UINT8    *sdpu_get_len_from_type (UINT8 *p, UINT8 *p_end, UINT8 type, UINT32 *p_len);
 extern BOOLEAN  sdpu_is_base_uuid (UINT8 *p_uuid);
 extern BOOLEAN  sdpu_compare_uuid_arrays (UINT8 *p_uuid1, UINT32 len1, UINT8 *p_uuid2, UINT16 len2);
 extern BOOLEAN  sdpu_compare_bt_uuids (tBT_UUID *p_uuid1, tBT_UUID *p_uuid2);

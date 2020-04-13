@@ -26,6 +26,7 @@
 #define LOG_TAG "bt_bta_dm"
 
 #include <assert.h>
+#include <cutils/log.h>
 #include <string.h>
 
 #include "bt_target.h"
@@ -48,6 +49,8 @@
 #if (GAP_INCLUDED == TRUE)
 #include "gap_api.h"
 #endif
+
+#define BTA_MAX_SERVICES 32
 
 static void bta_dm_inq_results_cb (tBTM_INQ_RESULTS *p_inq, UINT8 *p_eir);
 static void bta_dm_inq_cmpl_cb (void * p_result);
@@ -1681,7 +1684,7 @@ void bta_dm_sdp_result (tBTA_DM_MSG *p_data)
 #endif
 
     UINT32 num_uuids = 0;
-    UINT8  uuid_list[32][MAX_UUID_SIZE]; // assuming a max of 32 services
+    UINT8  uuid_list[BTA_MAX_SERVICES][MAX_UUID_SIZE]; // assuming a max of 32 services
 
     if((p_data->sdp_event.sdp_result == SDP_SUCCESS)
         || (p_data->sdp_event.sdp_result == SDP_NO_RECS_MATCH)
@@ -1759,8 +1762,12 @@ void bta_dm_sdp_result (tBTA_DM_MSG *p_data)
                             (tBTA_SERVICE_MASK)(BTA_SERVICE_ID_TO_SERVICE_MASK(bta_dm_search_cb.service_index-1));
                         tmp_svc = bta_service_id_to_uuid_lkup_tbl[bta_dm_search_cb.service_index-1];
                         /* Add to the list of UUIDs */
-                        sdpu_uuid16_to_uuid128(tmp_svc, uuid_list[num_uuids]);
-                        num_uuids++;
+                        if (num_uuids < BTA_MAX_SERVICES) {
+                          sdpu_uuid16_to_uuid128(tmp_svc, uuid_list[num_uuids]);
+                          num_uuids++;
+                        } else {
+                          android_errorWriteLog(0x534e4554, "74016921");
+                        }
                     }
                 }
             }
@@ -1799,8 +1806,12 @@ void bta_dm_sdp_result (tBTA_DM_MSG *p_data)
                 {
                     if (SDP_FindServiceUUIDInRec_128bit(p_sdp_rec, &temp_uuid))
                     {
-                        memcpy(uuid_list[num_uuids], temp_uuid.uu.uuid128, MAX_UUID_SIZE);
-                        num_uuids++;
+                        if (num_uuids < BTA_MAX_SERVICES) {
+                          memcpy(uuid_list[num_uuids], temp_uuid.uu.uuid128, MAX_UUID_SIZE);
+                          num_uuids++;
+                        } else {
+                          android_errorWriteLog(0x534e4554, "74016921");
+                        }
                     }
                 }
             } while (p_sdp_rec);
@@ -3425,12 +3436,16 @@ void bta_dm_acl_change(tBTA_DM_MSG *p_data)
         }
         if (conn.link_down.is_removed)
         {
-            BTM_SecDeleteDevice(p_bda);
+            // p_bda points to security record, which is removed in
+            // BTM_SecDeleteDevice.
+            BD_ADDR addr_copy;
+            memcpy(addr_copy, p_bda, BD_ADDR_LEN);
+            BTM_SecDeleteDevice(addr_copy);
 #if (BLE_INCLUDED == TRUE && BTA_GATT_INCLUDED == TRUE)
             /* need to remove all pending background connection */
-            BTA_GATTC_CancelOpen(0, p_bda, FALSE);
+            BTA_GATTC_CancelOpen(0, addr_copy, FALSE);
             /* remove all cached GATT information */
-            BTA_GATTC_Refresh(p_bda);
+            BTA_GATTC_Refresh(addr_copy);
 #endif
          }
 
